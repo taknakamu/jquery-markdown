@@ -151,3 +151,18 @@ code, pre {
 b, strong {
     font-weight: bold;
 }
+
+.markdown-body a, .markdown-body a:visited {
+    color: #4890A8!important;
+}
+
+.markdown-body code {
+    white-space: nowrap;
+}
+.markdown-body code, .markdown-body tt {
+    background-color: #F8F8F8;
+    border: 1px solid #DDDDDD;
+    border-radius: 3px;
+    margin: 0 2px;
+    padding: 0 5px;
+}
