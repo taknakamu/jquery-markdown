@@ -1,5 +1,5 @@
 /**
- *   jQuery.Markdown.js v0.0.5
+ *   jQuery.Markdown.js v0.0.6
  *   Author: taknakamu
  *   Git: https://github.com/taknakamu/jquery-markdown
  *
@@ -51,6 +51,12 @@
                                 default : function(tag, v) { return '<' + tag + '>' + v + '</' + tag + '>'; }
                             }
                         },
+                        replacer : {
+                            strong : ["__([^_]+)__", "\\\*\\\*([^*]+)\\\*\\\*"],
+                            em     : ["_([^_]+)_", "\\\*([^*]+)\\\*"],
+                            del    : ["~~([^~]+)~~"],
+                            code   : ["`([^`]+)`"]
+                        },
                         push : function(tag, text) {
                             if (md.convert.inStack()) {
                                 if (typeof text === 'undefined') {
@@ -70,27 +76,6 @@
                                 var text = innerHtml = "";
                                 var args = [];
 
-                                if (tag === "blockquote") {
-                                    var bq_format = "";
-                                    var tmp_editbody = {};
-
-                                    $.extend(tmp_editbody, md.variable.editbody); 
-                                    md.variable.editbody = md.variable.stack.text;
-                                    md.variable.stack.text = [];
-
-                                    $.each(md.variable.editbody, function() {
-                                        var args = arguments;
-
-                                        $.each(md.check.tags, function(tagname) {
-                                            md.check.wrapper(tagname, args);
-                                        })
-                                        bq_format += md.convert.html();
-                                        md.convert.html("");
-                                    });
-                                    md.variable.stack.text.push(bq_format);
-                                    $.extend(md.variable.editbody, tmp_editbody);
-                                }
-
                                 while (typeof (text = md.variable.stack.text.shift()) !== 'undefined') {
                                     if ((tag === "pre" || tag === "a" || tag === "img") && args.length === 0) {
                                         args.push(text);
@@ -98,9 +83,13 @@
                                     }
                                     md.convert.text(md.convert.text() + text);
 
-                                    if (tag === "pre") {
+                                    if (tag === "pre" || tag === "blockquote") {
                                         md.convert.text(md.convert.text() + md.options.empty_mark);
                                     }
+                                }
+
+                                if (tag === "blockquote") {
+                                    md.convert.text(markdownConvert(md.convert.text()));
                                 }
 
                                 if (typeof called === 'undefined') {
@@ -115,12 +104,12 @@
 
                                 innerHtml = md.convert.tags[tag][called].apply(this, args);
 
-                                innerHtml = innerHtml.replace(/__(.*)__/g, "<strong>$1</strong>")
-                                                     .replace(/\*\*(.*)\*\*/g, "<strong>$1</strong>");
-                                innerHtml = innerHtml.replace(/_(.*)_/g, "<em>$1</em>")
-                                                     .replace(/\*(.*)\*/g, "<em>$1</em>");
-                                innerHtml = innerHtml.replace(/~~(.*)~~/g, "<del>$1</del>");
-                                innerHtml = innerHtml.replace(/`(.*)`/g, "<code>$1</code>");
+                                $.each(md.convert.replacer, function(rep, regs) {
+                                    $(regs).each(function(i, exp) {
+                                        var regexp = new RegExp(exp, "g");
+                                        innerHtml = innerHtml.replace(regexp, '<' + rep + '>$1</' + rep + '>');
+                                    });
+                                });
 
                                 md.convert.html(innerHtml);
                                 md.convert.text("");
@@ -230,6 +219,16 @@
                                         if ("" === md.vs.nowv.replace(/-/g, "")) {
                                             md.convert.push("hr").pop();
                                         }
+                                    }
+                                }
+                                if (md.vs.nowv.indexOf("*") === 0) {
+                                    if ("" === md.vs.nowv.replace(/\*/g, "")) {
+                                        md.convert.push("hr").pop();
+                                    }
+                                }
+                                if (md.vs.nowv.indexOf("_") === 0) {
+                                    if ("" === md.vs.nowv.replace(/_/g, "")) {
+                                        md.convert.push("hr").pop();
                                     }
                                 }
                             },
