@@ -1,5 +1,5 @@
 /**
- *   jQuery.Markdown.js v0.0.6
+ *   jQuery.Markdown.js v0.0.7
  *   Author: taknakamu
  *   Git: https://github.com/taknakamu/jquery-markdown
  *
@@ -36,16 +36,30 @@
                             },
                             a  : {
                                 default : function(href, v) { return '<a href="' + href + '">' + v + '</a>'; },
+                                title   : function(href, v, title) { return '<a href="' + href + '" title="' + title + '" target="_blank">' + v + '</a>'; },
                                 target_blank : function(href, v) { return '<a href="' + href + '" target="_blank">' + v + '</a>'; }
                             },
                             img : {
-                                default : function(src, alt) { return '<img class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; }
+                                default : function(src, alt) { return '<img class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; },
+                                title   : function(src, alt, title) { return '<img title="' + title + '" class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; }
                             },
                             pre : {
                                 default : function(lang, v) { return '<pre class="brush: ' + lang.toLowerCase() + ';">' + v + '</pre>'; }
                             },
                             empty : {
                                 default : function()  { return md.options.empty_mark; }
+                            },
+                            th : {
+                                default : function(v) { return '<th>' + v + '</th>'; },
+                                center  : function(v) { return '<th align="center">' + v + '</th>'; },
+                                left    : function(v) { return '<th align="left">' + v + '</th>'; },
+                                right   : function(v) { return '<th align="right">' + v + '</th>'; },
+                            },
+                            td : {
+                                default : function(v) { return '<td>' + v + '</td>'; },
+                                center  : function(v) { return '<td align="center">' + v + '</td>'; },
+                                left    : function(v) { return '<td align="left">' + v + '</td>'; },
+                                right   : function(v) { return '<td align="right">' + v + '</td>'; },
                             },
                             notag : {
                                 default : function(tag, v) { return '<' + tag + '>' + v + '</' + tag + '>'; }
@@ -58,26 +72,33 @@
                             code   : ["`([^`]+)`"]
                         },
                         push : function(tag, text) {
-                            if (md.convert.inStack()) {
-                                if (typeof text === 'undefined') {
-                                    text = tag;
-                                }
-                            } else {
+                            if (!md.convert.inStack(tag)) {
                                 md.variable.stack.tag.push(tag);
                             }
+                            if (!md.variable.stack.text[tag]) {
+                                md.variable.stack.text[tag] = [];
+                            }
                             if (typeof text !== 'undefined') {
-                                md.variable.stack.text.push(text);
+                                md.variable.stack.text[tag].push(text);
                             }
                             return this;
                         },
-                        pop : function(called) {
+                        pushest : function(text) {
+                            if (md.convert.inStack()) {
+                                var maxi = md.variable.stack.tag.length - 1;
+                                var tag  = md.variable.stack.tag[maxi];
+                                return md.convert.push(tag, text);
+                            }
+                            return this;
+                        },
+                        pop : function(called, arguments_) {
                             if (md.convert.inStack()) {
                                 var tag = md.variable.stack.tag.pop();
                                 var text = innerHtml = "";
-                                var args = [];
+                                var args = (arguments_ || []);
 
-                                while (typeof (text = md.variable.stack.text.shift()) !== 'undefined') {
-                                    if ((tag === "pre" || tag === "a" || tag === "img") && args.length === 0) {
+                                while (typeof (text = md.variable.stack.text[tag].shift()) !== 'undefined') {
+                                    if (tag === "pre" && args.length === 0) {
                                         args.push(text);
                                         continue;
                                     }
@@ -111,7 +132,9 @@
                                     });
                                 });
 
-                                md.convert.html(innerHtml);
+                                if (!md.convert.inStack()) {
+                                    md.convert.html(innerHtml);
+                                }
                                 md.convert.text("");
 
                                 return innerHtml;
@@ -134,7 +157,8 @@
                             }
 
                             if (tag === "h" && md.convert.inStack()) {
-                                if (md.variable.stack.tag[0].match(/^h[1-6]/)) {
+                                var maxi = md.variable.stack.tag.length - 1;
+                                if (md.variable.stack.tag[maxi].match(/^h[1-6]/)) {
                                     return true;
                                 }
                             }
@@ -176,8 +200,10 @@
                             }
                             md.check.tags[callmethod].apply(this);
 
-                            if (typeof md.vs.nexv === 'undefined' && md.convert.inStack()) {
-                                md.convert.pop();
+                            if (typeof md.vs.nexv === 'undefined') {
+                                while (md.convert.inStack()) {
+                                    md.convert.pushest(md.convert.pop());
+                                }
                             }
                         },
                         tags : {
@@ -190,64 +216,46 @@
                                     var text = md.vs.nowv.replace(/^#{1,6}\s/, "")
                                     md.convert.push(tag, text).pop();
                                 } else if (md.check.isset(md.vs.nowv) && md.vs.nexv) {
+                                    if (md.convert.inStack("h")) {
+                                        md.convert.pop();
+                                    }
+
                                     /**
                                      *  H1 Text
                                      *  ================
                                      */
-                                    if (md.vs.nexv.indexOf("=") === 0) {
-                                        if ("" === md.vs.nexv.replace(/=/g, "")) {
-                                            md.convert.push("h1", md.vs.nowv);
-                                        }
+                                    if (md.vs.nexv.match(/^=+$/)) {
+                                        md.convert.push("h1", md.vs.nowv);
                                     }
 
                                     /**
                                      *  H2 Text
                                      *  ----------------
                                      */
-                                    if (md.vs.nexv.indexOf("-") === 0) {
-                                        if ("" === md.vs.nexv.replace(/-/g, "")) {
-                                            md.convert.push("h2", md.vs.nowv);
-                                        }
+                                    if (md.vs.nexv.match(/^\-+$/)) {
+                                        md.convert.push("h2", md.vs.nowv);
                                     }
                                 } else {
                                     md.convert.pop();
                                 }
                             },
                             hr : function() {
-                                if (md.vs.nowv.indexOf("-") === 0) {
-                                    if (null !== md.vs.prev.match(/^#{1,6}\s/) || !md.check.isset(md.vs.prev)) {
-                                        if ("" === md.vs.nowv.replace(/-/g, "")) {
+                                var checker = function(mark) {
+                                    if (md.vs.nowv.indexOf(mark) === 0) {
+                                        var regexp = new RegExp(((mark === "*") ? "\\" + mark : mark), "g");
+
+                                        if ("" === md.vs.nowv.replace(regexp, "")) {
                                             md.convert.push("hr").pop();
                                         }
                                     }
                                 }
-                                if (md.vs.nowv.indexOf("*") === 0) {
-                                    if ("" === md.vs.nowv.replace(/\*/g, "")) {
-                                        md.convert.push("hr").pop();
-                                    }
-                                }
-                                if (md.vs.nowv.indexOf("_") === 0) {
-                                    if ("" === md.vs.nowv.replace(/_/g, "")) {
-                                        md.convert.push("hr").pop();
-                                    }
-                                }
-                            },
-                            a : function() {
-                                if (null !== md.vs.nowv.match(/^!?\[.*\]\(.*\)$/)) {
-                                    var alt = md.vs.nowv.replace(/^!?\[(.*)\]\(.*\)/, "$1");
-                                    var src = md.vs.nowv.replace(/^!?\[.*\]\((.*)\)/, "$1").split(" ")[0];
 
-                                    if (null !== md.vs.nowv.match(/^!/)) {
-                                        var img = md.convert.push("img", src).push(alt).pop();
-                                        var a   = md.convert.push("a", src).push(img).pop("target_blank");
-                                    } else {
-                                        a = md.convert.push("a", src).push(alt).pop();
-                                    }
-                                    md.convert.push("p", a).pop();
-                                }
+                                checker("-");
+                                checker("*");
+                                checker("_");
                             },
                             empty : function() {
-                                if ("" === md.vs.nowv) {
+                                if ("" === md.vs.nowv || md.vs.nowv.match(/^!?\[.*\]:.*/)) {
                                     md.convert.push("empty").pop();
                                 }
                             },
@@ -257,21 +265,212 @@
                                         md.convert.push("pre", md.vs.nowv.replace(/`/g, "")):
                                         md.convert.pop();
                                 } else if (md.convert.inStack("pre")) {
-                                    md.convert.push(md.vs.nowv);
+                                    md.convert.pushest(md.vs.nowv);
                                 }
                             },
                             blockquote : function(args) {
-                                if (md.vs.nowv.match(/^[\s{1,3}]?>\s?/)) {
-                                    md.vs.nowv = md.vs.nowv.replace(/^[\s{1,3}]?>\s?/, "");
+                                if (md.vs.nowv.match(/^(\s{1,3})?>\s?/)) {
+                                    md.vs.nowv = md.vs.nowv.replace(/^(\s{1,3})?>\s?/, "");
                                     md.convert.push("blockquote", md.vs.nowv);
                                 } else if (!md.check.isset(md.vs.nowv)) {
                                     if (typeof md.vs.nexv !== 'undefined' && md.check.isset(md.vs.nexv)) {
-                                        if (!md.vs.nexv.match(/^[\s{1,3}]?>/)) {
+                                        if (!md.vs.nexv.match(/^(\s{1,3})?>/)) {
                                             md.convert.pop();
                                         }
                                     }
                                 } else if (md.convert.inStack("blockquote")) {
-                                    md.convert.push(md.vs.nowv);
+                                    md.convert.pushest(md.vs.nowv);
+                                }
+                            },
+                            ol : function() {
+                                var nv = md.vs.nowv;
+                                var nn = md.vs.nexv;
+                                var pv = md.vs.prev;
+
+                                // 一番最初
+                                if (nv.match(/^(\s{0,7})?[0-9]+[.]\s/)) {
+
+                                    // olがなかったら入れる
+                                    if (!md.convert.inStack("ol")) {
+                                        md.convert.push("ol");
+                                    }
+
+                                }
+
+                                // olがある場合のみ処理する
+                                if (md.convert.inStack("ol")) {
+
+
+                                    // 先頭にスペースなし
+                                    // 数値.△　cf) 12.△ (△ <- 半角スペース)
+                                    if (nv.match(/^[0-9]+[.]\s/) || nv.match(/^[\*\+\-]\s/)) {
+
+                                        // すでにliが入っている場合は、
+                                        // liをpopしてから今の処理に移る
+                                        if (md.convert.inStack("li")) {
+
+                                            var textlength = md.variable.stack.text["li"].length;
+
+                                            if (textlength !== 1) {
+                                                var converttext = "";
+
+                                                $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                    converttext += v + md.options.empty_mark;
+                                                });
+
+                                                md.convert.pop();
+                                                md.convert.push("li", markdownConvert(converttext));
+                                                md.convert.pmode = true;
+                                            }
+                                            md.convert.pushest(md.convert.pop());
+                                        }
+                                        md.convert.push("li", nv.replace(/^\s{0,7}?[0-9]+[.]\s(.*)/, "$1"));
+
+                                    } else if (nv.match(/^\s{0,7}?[\*\+\-]\s/)) {
+                                        md.convert.pushest(nv.replace(/^[\*\+\-]\s(.*)/, "$1"));
+
+                                        if (!md.check.isset(pv)) {
+                                            var converttext = "";
+
+                                            $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                converttext += v + md.options.empty_mark;
+                                            });
+
+                                            md.convert.pop();
+                                            md.convert.push("li", markdownConvert(converttext));
+                                            md.convert.pushest(md.convert.pop());
+                                            md.convert.pop();
+                                            return true;
+                                        }
+
+                                        if (nn.match(/^[0-9]+[.]\s/)) {
+                                            var converttext = "";
+
+                                            $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                converttext += v + md.options.empty_mark;
+                                            });
+
+                                            md.convert.pop();
+                                            md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
+                                            md.convert.pushest(md.convert.pop());
+                                        }
+                                    } else if (nv.match(/^\s+.*/)) {
+                                        md.convert.pushest(nv.replace(/^\s+/, ""));
+                                    } else if (!md.check.isset(nv)) {
+                                        md.convert.pushest(nv);
+
+                                        if (!md.check.isset(nn)) {
+                                            return true;
+                                        }
+
+                                        if (nn && nn.match(/^\s+.*/)) {
+                                            return true;
+                                        }
+
+                                        if (nn && nn.match(/^\s{0,7}?[0-9]+[.]\s/)) {
+                                            return true;
+                                        }
+
+                                        if (md.convert.inStack("li")) {
+                                            var textlength = 0;
+
+                                            $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                if ("" !== v) {
+                                                    textlength++;
+                                                }
+                                            });
+
+                                            if (textlength !== 1 || md.convert.pmode) {
+                                                md.convert.pmode = false;
+                                                var converttext = "";
+
+                                                $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                    converttext += v + md.options.empty_mark;
+                                                });
+
+                                                md.convert.pop();
+                                                md.convert.push("li", markdownConvert(converttext));
+                                            }
+                                            md.convert.pushest(md.convert.pop());
+                                        }
+                                        md.convert.pop();
+                                    }
+
+
+
+                                }
+                            },
+                            ul : function() {
+                                if (md.vs.nowv.match(/^\s{0,7}?[\*\-\+]\s/)) {
+                                    if (!md.convert.inStack("ul")) {
+                                        md.convert.push("ul");
+                                    }
+                                    md.convert.pushest(
+                                        md.convert.push("li", md.vs.nowv.replace(/^\s{0,7}?[\*\-\+]\s/, "")).pop()
+                                    );
+                                }
+
+                                if (md.convert.inStack("ul") && typeof md.vs.nexv !== 'undefined') {
+                                    if (!md.vs.nexv.match(/^\s{0,7}?[\*\-\+]\s/)) {
+                                        md.convert.pop();
+                                    }
+                                }
+                            },
+                            table : function() {
+                                var nv = md.vs.nowv;
+                                var nn = md.vs.nexv;
+
+                                if (nn && nv.match(/\|/) && nn.match(/:?-+:?[\s+]?\|/)) {
+                                    if (!md.convert.inStack("table")) {
+                                        md.convert.push("table").push("thead").push("tr");
+
+                                        var trs = nn.replace(/^\|(.*)\|$/, "$1").split("|");
+                                        md.aligns = [];
+
+                                        $(trs).each(function(i, v) {
+                                            var repv = v.replace(/^\s+|\s+$/g, "");
+
+                                            if (repv.match(/^:.*:$/)) {
+                                                md.aligns[i] = "center";
+                                            } else if (repv.match(/^:/)) {
+                                                md.aligns[i] = "left";
+                                            } else if (repv.match(/:$/)) {
+                                                md.aligns[i] = "right";
+                                            } else {
+                                                md.aligns[i] = "default";
+                                            }
+                                        });
+
+                                        var ths = nv.replace(/^\|(.*)\|$/, "$1").split("|");
+
+                                        $(ths).each(function(i, v) {
+                                            md.convert.pushest(
+                                                md.convert.push("th", v.replace(/^\s+|\s+$/g, "")).pop(md.aligns[i])
+                                            );
+                                        });
+
+                                        md.convert.pushest((md.convert.pop()));
+                                        md.convert.pushest((md.convert.pop()));
+                                    }
+                                } else if (nn && nv.match(/\|/)) {
+                                    if (!md.convert.inStack("tbody")) {
+                                        md.convert.push("tbody");
+                                    } else {
+                                        md.convert.push("tr");
+
+                                        var tds = nv.replace(/^\|(.*)\|$/, "$1").split("|");
+
+                                        $(tds).each(function(i, v) {
+                                            md.convert.pushest(
+                                                md.convert.push("td", v.replace(/^\s+|\s+$/g, "")).pop(md.aligns[i])
+                                            );
+                                        });
+
+                                        md.convert.pushest((md.convert.pop()));
+                                    }
+                                } else if (md.convert.inStack("table")) {
+                                    md.convert.pushest((md.convert.pop()));
+                                    md.convert.pop();
                                 }
                             },
                             p : function() {
@@ -281,13 +480,91 @@
                                             md.convert.push("p");
                                         }
 
-                                        if (typeof md.vs.nexv === 'undefined' ||
-                                           (typeof md.vs.nexv !== 'undefined' && 
-                                           ("" === md.vs.nexv || null !== md.vs.nexv.match(/^#{1,6}\s/))
-                                           )) {
-                                            md.convert.push(md.vs.nowv).pop();
+                                        var getTitle = function(src) {
+                                            var title = null;
+                                            var matches = new RegExp("\\[" + src + "\\]:", "i");
+
+                                            $.each(md.variable.editbody, function(i, v) {
+                                                if (v.match(matches)) {
+                                                    if ((uri = v.match(/\[.*\]:(.*)/))) {
+                                                        uri = uri[1].replace(/^\s+/, "");
+                                                        src = uri.split(" ")[0];
+                                                        title = uri.match(/.*"(.*)"/);
+                                                        title = (title) ? title[1] : null;
+                                                    }
+                                                }
+                                            });
+
+                                            return [src, title];
+                                        }
+
+                                        var createtags = function(src, alt, title) {
+                                            if (null !== md.vs.nowv.match(/!/)) {
+                                                var img = md.convert.push("img").pop((title ? "title" : "default"), [src, alt, title]);
+                                                var a   = md.convert.push("a").pushest(img).pop("target_blank", [src]);
+                                            } else {
+                                                a = md.convert.push("a").pop((title ? "title" : "default"), [src, alt, title]);
+                                            }
+                                            return a;
+                                        }
+
+                                        if (null !== md.vs.nowv.match(/!?\[.*\]\(.*\)/)) {
+                                            var alt = md.vs.nowv.replace(/^.*?!?\[(.*)\]\(.*\)/, "$1");
+                                            var src = md.vs.nowv.replace(/^.*?!?\[.*\]\((.*)\)/, "$1").split(" ")[0];
+                                            var title = md.vs.nowv.replace(/^.*?!?\[.*\]\(.*\s"(.*)"\)/, "$1");
+                                            title = (md.vs.nowv !== title) ? title : null;
+
+                                            var a = createtags(src, alt, title);
+                                            md.vs.nowv = md.vs.nowv.replace(/^(.*)?(!?\[.*\]\(.*\))(.*)?/, "$1" + a + "$3");
+                                        }
+
+                                        if (null !== md.vs.nowv.match(/!?\[.*\]\[.*\]/)) {
+                                            var alt = md.vs.nowv.replace(/!?\[(.*)\]\[.*\]/, "$1");
+                                            var src = md.vs.nowv.replace(/!?\[.*\]\[(.*)\]/, "$1");
+
+                                            var title_matches = getTitle(src);
+                                            src   = title_matches[0];
+                                            title = title_matches[1];
+
+                                            md.vs.nowv = createtags(src, alt, title);
+                                        }
+
+                                        if (null !== md.vs.nowv.match(/!?\[.*\]/)) {
+                                            var alt = src = md.vs.nowv.replace(/^.*?!?\[(.*)\].*?/, "$1");
+
+                                            var title_matches = getTitle(src);
+                                            src   = title_matches[0];
+                                            title = title_matches[1];
+
+                                            var a = createtags(src, alt, title);
+                                            md.vs.nowv = md.vs.nowv.replace(/^(.*)?!?\[(.*)\](.*)?/, "$1" + a + "$3");
+                                        }
+
+                                        if (typeof md.vs.nexv !== 'undefined') {
+                                            if (md.convert.inStack("p")) {
+                                                if (md.vs.nexv.match(/^=+$/)) {
+                                                    md.convert.pop();
+                                                    md.convert.push("h1", md.vs.nowv);
+                                                    return true;
+                                                }
+                                                if (md.vs.nexv.match(/^\-+$/)) {
+                                                    md.convert.pop();
+                                                    md.convert.push("h2", md.vs.nowv);
+                                                    return true;
+                                                }
+                                            }
+
+                                            var convertedtext = markdownConvert(md.vs.nexv);
+
+                                            if ("" !== convertedtext && "<p>" !== convertedtext.substr(0,3)) {
+                                                md.convert.pushest(md.vs.nowv).pop();
+                                            }
+                                        }
+
+                                        if (typeof md.vs.nexv === 'undefined') {
+                                            md.convert.pushest(md.vs.nowv).pop();
                                         } else {
-                                            md.convert.push(md.vs.nowv + '<br>');
+                                            md.convert.pushest(md.vs.nowv + '<br>');
                                         }
                                     }
                                 }
