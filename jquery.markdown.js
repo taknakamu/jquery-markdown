@@ -1,5 +1,5 @@
 /**
- *   jQuery.Markdown.js v0.0.7
+ *   jQuery.Markdown.js v0.0.8
  *   Author: taknakamu
  *   Git: https://github.com/taknakamu/jquery-markdown
  *
@@ -235,7 +235,7 @@
                                     if (md.vs.nexv.match(/^\-+$/)) {
                                         md.convert.push("h2", md.vs.nowv);
                                     }
-                                } else {
+                                } else if (md.convert.inStack("h")) {
                                     md.convert.pop();
                                 }
                             },
@@ -287,26 +287,16 @@
                                 var nn = md.vs.nexv;
                                 var pv = md.vs.prev;
 
-                                // 一番最初
                                 if (nv.match(/^(\s{0,7})?[0-9]+[.]\s/)) {
-
-                                    // olがなかったら入れる
                                     if (!md.convert.inStack("ol")) {
                                         md.convert.push("ol");
                                     }
-
                                 }
 
-                                // olがある場合のみ処理する
                                 if (md.convert.inStack("ol")) {
 
-
-                                    // 先頭にスペースなし
-                                    // 数値.△　cf) 12.△ (△ <- 半角スペース)
                                     if (nv.match(/^[0-9]+[.]\s/) || nv.match(/^[\*\+\-]\s/)) {
 
-                                        // すでにliが入っている場合は、
-                                        // liをpopしてから今の処理に移る
                                         if (md.convert.inStack("li")) {
 
                                             var textlength = md.variable.stack.text["li"].length;
@@ -319,44 +309,53 @@
                                                 });
 
                                                 md.convert.pop();
-                                                md.convert.push("li", markdownConvert(converttext));
+                                                md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
                                                 md.convert.pmode = true;
                                             }
                                             md.convert.pushest(md.convert.pop());
                                         }
                                         md.convert.push("li", nv.replace(/^\s{0,7}?[0-9]+[.]\s(.*)/, "$1"));
 
-                                    } else if (nv.match(/^\s{0,7}?[\*\+\-]\s/)) {
-                                        md.convert.pushest(nv.replace(/^[\*\+\-]\s(.*)/, "$1"));
+                                    } else if (nv.match(/^\s+/)) {
 
-                                        if (!md.check.isset(pv)) {
-                                            var converttext = "";
+                                        nv = nv.replace(/^\s+/g, "");
 
-                                            $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                converttext += v + md.options.empty_mark;
-                                            });
+                                        if (nv.match(/^[\*\+\-]\s/)) {
+                                            md.convert.pushest(nv.replace(/^[\*\+\-]\s(.*)/, "$1"));
 
-                                            md.convert.pop();
-                                            md.convert.push("li", markdownConvert(converttext));
-                                            md.convert.pushest(md.convert.pop());
-                                            md.convert.pop();
-                                            return true;
+                                            if (!md.check.isset(pv)) {
+                                                var converttext = "";
+
+                                                $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                    converttext += v + md.options.empty_mark;
+                                                });
+
+                                                md.convert.pop();
+                                                md.convert.push("li", markdownConvert(converttext));
+                                                md.convert.pushest(md.convert.pop());
+                                                md.convert.pop();
+                                                return true;
+                                            }
+
+                                            if (nn.match(/^[0-9]+[.]\s/)) {
+                                                var converttext = "";
+
+                                                $(md.variable.stack.text["li"]).each(function(i, v) {
+                                                    converttext += v + md.options.empty_mark;
+                                                });
+
+                                                md.convert.pop();
+                                                md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
+                                                md.convert.pushest(md.convert.pop());
+                                            }
+                                        } else if (nv.match(/^.*/)) {
+                                            md.convert.pushest(nv);
+                                        } else if (!md.check.isset(nv)) {
+                                            md.convert.pushest(nv);
                                         }
 
-                                        if (nn.match(/^[0-9]+[.]\s/)) {
-                                            var converttext = "";
-
-                                            $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                converttext += v + md.options.empty_mark;
-                                            });
-
-                                            md.convert.pop();
-                                            md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
-                                            md.convert.pushest(md.convert.pop());
-                                        }
-                                    } else if (nv.match(/^\s+.*/)) {
-                                        md.convert.pushest(nv.replace(/^\s+/, ""));
                                     } else if (!md.check.isset(nv)) {
+
                                         md.convert.pushest(nv);
 
                                         if (!md.check.isset(nn)) {
@@ -394,10 +393,9 @@
                                             md.convert.pushest(md.convert.pop());
                                         }
                                         md.convert.pop();
+                                    } else {
+                                        md.convert.pushest(nv);
                                     }
-
-
-
                                 }
                             },
                             ul : function() {
@@ -568,6 +566,18 @@
                                         }
                                     }
                                 }
+                            },
+                            etc : function() {
+                                var innerHtml = md.vs.nowv;
+/*
+                                $.each(md.convert.replacer, function(rep, regs) {
+                                    $(regs).each(function(i, exp) {
+                                        var regexp = new RegExp(exp, "g");
+                                        innerHtml = innerHtml.replace(regexp, '<' + rep + '>$1</' + rep + '>');
+                                    });
+                                });
+*/
+                                md.convert.html(innerHtml);
                             }
                         }
                     }
@@ -589,14 +599,17 @@
                 return md_format;
             }
 
-            var markdownconvert = "";
+            return this.each(function() {
 
-            $.each($(this), function(i, v) {
-                markdownconvert += markdownConvert.apply(this, [$(v).val()]);
+                var markdownconvert = "";
+
+                $.each($(this), function(i, v) {
+                    markdownconvert += markdownConvert.apply(this, [$(v).val()]);
+                });
+                $(options.target_form).addClass("markdown-body").html(markdownconvert);
+
             });
-            $(options.target_form).addClass("markdown-body").html(markdownconvert);
 
-            return this;
         }
     });
 })(jQuery);
