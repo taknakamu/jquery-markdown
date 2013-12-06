@@ -567,7 +567,9 @@
                     }
                 };
 
-                var lipop = function(tag = "li") {
+                var lipop = function() {
+                    var tag = "li";
+
                     if (md.convert.inStack(tag)) {
                         var textlength = getTextLength();
                         var textlengthAddSpace = getTextLength(true);
@@ -590,7 +592,8 @@
                     }
                 };
 
-                var getConvertText = function(mode_length, tag = "li") {
+                var getConvertText = function(mode_length) {
+                    var tag = "li";
                     var textlength = 0;
                     var converttext = "";
 
@@ -604,7 +607,8 @@
                     return ((mode_length) ? textlength : converttext);
                 };
 
-                var getTextLength = function(isset_, tag = "li") {
+                var getTextLength = function(isset_) {
+                    tag = "li";
                     return ((isset_) ? getConvertText(true) : md.variable.stack.text[tag].length);
                 };
 
@@ -629,9 +633,10 @@
                 var markdownconvert = "";
 
                 $.each($(this), function(i, v) {
-                    markdownconvert += markdownConvert.apply(this, [$(v).val()]);
+                    var v = ($(v).val() || $(v).html());
+                    markdownconvert += markdownConvert.apply(this, [v]);
                 });
-                $(options.target_form).addClass("markdown-body").html(markdownconvert);
+                $(this).addClass("markdown-body").html(markdownconvert);
 
             });
 
