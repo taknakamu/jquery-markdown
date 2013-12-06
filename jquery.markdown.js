@@ -1,5 +1,5 @@
 /**
- *   jQuery.Markdown.js v0.0.8
+ *   jQuery.Markdown.js v0.0.9
  *   Author: taknakamu
  *   Git: https://github.com/taknakamu/jquery-markdown
  *
@@ -285,68 +285,28 @@
                             ol : function() {
                                 var nv = md.vs.nowv;
                                 var nn = md.vs.nexv;
-                                var pv = md.vs.prev;
 
                                 if (nv.match(/^(\s{0,7})?[0-9]+[.]\s/)) {
                                     if (!md.convert.inStack("ol")) {
                                         md.convert.push("ol");
+                                        nv = nv.replace(/^\s+/g, "");
                                     }
                                 }
 
                                 if (md.convert.inStack("ol")) {
-
                                     if (nv.match(/^[0-9]+[.]\s/) || nv.match(/^[\*\+\-]\s/)) {
-
-                                        if (md.convert.inStack("li")) {
-
-                                            var textlength = md.variable.stack.text["li"].length;
-
-                                            if (textlength !== 1) {
-                                                var converttext = "";
-
-                                                $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                    converttext += v + md.options.empty_mark;
-                                                });
-
-                                                md.convert.pop();
-                                                md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
-                                                md.convert.pmode = true;
-                                            }
-                                            md.convert.pushest(md.convert.pop());
-                                        }
-                                        md.convert.push("li", nv.replace(/^\s{0,7}?[0-9]+[.]\s(.*)/, "$1"));
-
+                                        lipop();
+                                        md.convert.push("li", nv.replace(/^\s{0,7}?[0-9]+[.]\s(.*)/, "$1")
+                                                                .replace(/^[\*\+\-]\s(.*)/, "$1"));
                                     } else if (nv.match(/^\s+/)) {
 
                                         nv = nv.replace(/^\s+/g, "");
 
                                         if (nv.match(/^[\*\+\-]\s/)) {
-                                            md.convert.pushest(nv.replace(/^[\*\+\-]\s(.*)/, "$1"));
-
-                                            if (!md.check.isset(pv)) {
-                                                var converttext = "";
-
-                                                $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                    converttext += v + md.options.empty_mark;
-                                                });
-
-                                                md.convert.pop();
-                                                md.convert.push("li", markdownConvert(converttext));
-                                                md.convert.pushest(md.convert.pop());
-                                                md.convert.pop();
-                                                return true;
-                                            }
+                                            md.convert.pushest(nv);
 
                                             if (nn.match(/^[0-9]+[.]\s/)) {
-                                                var converttext = "";
-
-                                                $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                    converttext += v + md.options.empty_mark;
-                                                });
-
-                                                md.convert.pop();
-                                                md.convert.push("li", markdownConvert(converttext).replace("<p>", "").replace("</p>", ""));
-                                                md.convert.pushest(md.convert.pop());
+                                                lipop();
                                             }
                                         } else if (nv.match(/^.*/)) {
                                             md.convert.pushest(nv);
@@ -355,62 +315,86 @@
                                         }
 
                                     } else if (!md.check.isset(nv)) {
-
-                                        md.convert.pushest(nv);
-
                                         if (!md.check.isset(nn)) {
+                                            md.convert.pushest(nv);
                                             return true;
                                         }
 
-                                        if (nn && nn.match(/^\s+.*/)) {
-                                            return true;
-                                        }
-
-                                        if (nn && nn.match(/^\s{0,7}?[0-9]+[.]\s/)) {
-                                            return true;
-                                        }
-
-                                        if (md.convert.inStack("li")) {
-                                            var textlength = 0;
-
-                                            $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                if ("" !== v) {
-                                                    textlength++;
-                                                }
-                                            });
-
-                                            if (textlength !== 1 || md.convert.pmode) {
-                                                md.convert.pmode = false;
-                                                var converttext = "";
-
-                                                $(md.variable.stack.text["li"]).each(function(i, v) {
-                                                    converttext += v + md.options.empty_mark;
-                                                });
-
-                                                md.convert.pop();
-                                                md.convert.push("li", markdownConvert(converttext));
+                                        if (nn && nn.match(/^\s+/)) {
+                                            if (!nn.match(/^\s{1,7}?[\*\+\-]\s/)) {
+                                                md.convert.pushest(nv);
+                                                return true;
                                             }
-                                            md.convert.pushest(md.convert.pop());
+                                        } else if (nn) {
+                                            if (nn.match(/^[0-9]+[.]\s/)) {
+                                                md.convert.pushest(nv);
+                                                return true;
+                                            }
                                         }
+
+                                        lipop();
                                         md.convert.pop();
+                                        md.addP = false;
                                     } else {
                                         md.convert.pushest(nv);
                                     }
                                 }
                             },
                             ul : function() {
-                                if (md.vs.nowv.match(/^\s{0,7}?[\*\-\+]\s/)) {
+                                var nv = md.vs.nowv;
+                                var nn = md.vs.nexv;
+
+                                if (nv.match(/^(\s{0,7})?[\*\+\-]\s/)) {
                                     if (!md.convert.inStack("ul")) {
                                         md.convert.push("ul");
+                                        nv = nv.replace(/^\s+/g, "");
                                     }
-                                    md.convert.pushest(
-                                        md.convert.push("li", md.vs.nowv.replace(/^\s{0,7}?[\*\-\+]\s/, "")).pop()
-                                    );
                                 }
 
-                                if (md.convert.inStack("ul") && typeof md.vs.nexv !== 'undefined') {
-                                    if (!md.vs.nexv.match(/^\s{0,7}?[\*\-\+]\s/)) {
+                                if (md.convert.inStack("ul")) {
+                                    if (nv.match(/^[0-9]+[.]\s/) || nv.match(/^[\*\+\-]\s/)) {
+                                        lipop();
+                                        md.convert.push("li", nv.replace(/^\s{0,7}?[0-9]+[.]\s(.*)/, "$1")
+                                                                .replace(/^[\*\+\-]\s(.*)/, "$1"));
+                                    } else if (nv.match(/^\s+/)) {
+
+                                        nv = nv.replace(/^\s+/g, "");
+
+                                        if (nv.match(/^[0-9]+[.]\s/)) {
+                                            md.convert.pushest(nv);
+
+                                            if (nn.match(/^[\*\+\-]\s/)) {
+                                                lipop();
+                                            }
+                                        } else if (nv.match(/^.*/)) {
+                                            md.convert.pushest(nv);
+                                        } else if (!md.check.isset(nv)) {
+                                            md.convert.pushest(nv);
+                                        }
+
+                                    } else if (!md.check.isset(nv)) {
+                                        if (!md.check.isset(nn)) {
+                                            md.convert.pushest(nv);
+                                            return true;
+                                        }
+
+                                        if (nn && nn.match(/^\s+/)) {
+                                            if (!nn.match(/^\s{1,7}?[0-9]+[.]\s/)) {
+                                                md.convert.pushest(nv);
+                                                return true;
+                                            }
+                                        } else if (nn) {
+                                            if (nn.match(/^[\*\+\-]\s/)) {
+                                                md.convert.pushest(nv);
+                                                return true;
+                                            }
+                                        }
+
+                                        lipop();
                                         md.convert.pop();
+                                        md.addP = false;
+                                    } else {
+                                        md.convert.pushest(nv);
                                     }
                                 }
                             },
@@ -581,6 +565,47 @@
                             }
                         }
                     }
+                };
+
+                var lipop = function(tag = "li") {
+                    if (md.convert.inStack(tag)) {
+                        var textlength = getTextLength();
+                        var textlengthAddSpace = getTextLength(true);
+                        var converttext = getConvertText();
+
+                        if (textlength !== 1 && textlength !== textlengthAddSpace) {
+                            md.addP = true;
+                        }
+
+                        md.convert.pop();
+
+                        var poped = markdownConvert(converttext);
+
+                        if (!md.addP) {
+                            poped = poped.replace("<p>", "").replace("</p>", "");
+                        }
+
+                        md.convert.push(tag, poped);
+                        md.convert.pushest(md.convert.pop());
+                    }
+                };
+
+                var getConvertText = function(mode_length, tag = "li") {
+                    var textlength = 0;
+                    var converttext = "";
+
+                    $(md.variable.stack.text[tag]).each(function(i, v) {
+                        if ("" !== v) {
+                            textlength++;
+                        }
+                        converttext += v + md.options.empty_mark;
+                    });
+
+                    return ((mode_length) ? textlength : converttext);
+                };
+
+                var getTextLength = function(isset_, tag = "li") {
+                    return ((isset_) ? getConvertText(true) : md.variable.stack.text[tag].length);
                 };
 
                 md.variable.editbody = art_body.split(/\n/);
