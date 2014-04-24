@@ -1,5 +1,5 @@
 /**
- *   jQuery.Markdown.js v0.0.9
+ *   jQuery.Markdown.js v0.0.10
  *   Author: taknakamu
  *   Git: https://github.com/taknakamu/jquery-markdown
  *
@@ -32,37 +32,37 @@
                     convert : {
                         tags : {
                             hr : {
-                                default : function()  { return "<hr />"; }
+                                default_ : function()  { return "<hr />"; }
                             },
                             a  : {
-                                default : function(href, v) { return '<a href="' + href + '">' + v + '</a>'; },
+                                default_ : function(href, v) { return '<a href="' + href + '">' + v + '</a>'; },
                                 title   : function(href, v, title) { return '<a href="' + href + '" title="' + title + '" target="_blank">' + v + '</a>'; },
                                 target_blank : function(href, v) { return '<a href="' + href + '" target="_blank">' + v + '</a>'; }
                             },
                             img : {
-                                default : function(src, alt) { return '<img class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; },
+                                default_ : function(src, alt) { return '<img class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; },
                                 title   : function(src, alt, title) { return '<img title="' + title + '" class="img-frame" style="max-width:100%;" src="' + src + '" alt="' + alt + '"/>'; }
                             },
                             pre : {
-                                default : function(lang, v) { return '<pre class="brush: ' + lang.toLowerCase() + ';">' + v + '</pre>'; }
+                                default_ : function(lang, v) { return '<pre class="brush: ' + lang.toLowerCase() + ';">' + v + '</pre>'; }
                             },
                             empty : {
-                                default : function()  { return md.options.empty_mark; }
+                                default_ : function()  { return md.options.empty_mark; }
                             },
                             th : {
-                                default : function(v) { return '<th>' + v + '</th>'; },
+                                default_ : function(v) { return '<th>' + v + '</th>'; },
                                 center  : function(v) { return '<th align="center">' + v + '</th>'; },
                                 left    : function(v) { return '<th align="left">' + v + '</th>'; },
-                                right   : function(v) { return '<th align="right">' + v + '</th>'; },
+                                right   : function(v) { return '<th align="right">' + v + '</th>'; }
                             },
                             td : {
-                                default : function(v) { return '<td>' + v + '</td>'; },
+                                default_ : function(v) { return '<td>' + v + '</td>'; },
                                 center  : function(v) { return '<td align="center">' + v + '</td>'; },
                                 left    : function(v) { return '<td align="left">' + v + '</td>'; },
-                                right   : function(v) { return '<td align="right">' + v + '</td>'; },
+                                right   : function(v) { return '<td align="right">' + v + '</td>'; }
                             },
                             notag : {
-                                default : function(tag, v) { return '<' + tag + '>' + v + '</' + tag + '>'; }
+                                default_ : function(tag, v) { return '<' + tag + '>' + v + '</' + tag + '>'; }
                             }
                         },
                         replacer : {
@@ -114,7 +114,7 @@
                                 }
 
                                 if (typeof called === 'undefined') {
-                                    called = 'default';
+                                    called = 'default_';
                                 }
 
                                 if (args.length === 0 && !md.convert.tags[tag]) {
@@ -419,7 +419,7 @@
                                             } else if (repv.match(/:$/)) {
                                                 md.aligns[i] = "right";
                                             } else {
-                                                md.aligns[i] = "default";
+                                                md.aligns[i] = "default_";
                                             }
                                         });
 
@@ -482,10 +482,10 @@
 
                                         var createtags = function(src, alt, title) {
                                             if (null !== md.vs.nowv.match(/!/)) {
-                                                var img = md.convert.push("img").pop((title ? "title" : "default"), [src, alt, title]);
+                                                var img = md.convert.push("img").pop((title ? "title" : "default_"), [src, alt, title]);
                                                 var a   = md.convert.push("a").pushest(img).pop("target_blank", [src]);
                                             } else {
-                                                a = md.convert.push("a").pop((title ? "title" : "default"), [src, alt, title]);
+                                                a = md.convert.push("a").pop((title ? "title" : "default_"), [src, alt, title]);
                                             }
                                             return a;
                                         }
