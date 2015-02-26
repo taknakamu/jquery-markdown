@@ -491,9 +491,9 @@
                                         }
 
                                         if (null !== md.vs.nowv.match(/!?\[.*\]\(.*\)/)) {
-                                            var alt = md.vs.nowv.replace(/^.*?!?\[(.*)\]\(.*\)/, "$1");
-                                            var src = md.vs.nowv.replace(/^.*?!?\[.*\]\((.*)\)/, "$1").split(" ")[0];
-                                            var title = md.vs.nowv.replace(/^.*?!?\[.*\]\(.*\s"(.*)"\)/, "$1");
+                                            var alt = md.vs.nowv.replace(/^.*?!?\[(.*)\]\(.*\).*/, "$1");
+                                            var src = md.vs.nowv.replace(/^.*?!?\[.*\]\((.*)\).*/, "$1").split(" ")[0];
+                                            var title = md.vs.nowv.replace(/^.*?!?\[.*\]\(.*\s"(.*)"\).*/, "$1");
                                             title = (md.vs.nowv !== title) ? title : null;
 
                                             var a = createtags(src, alt, title);
