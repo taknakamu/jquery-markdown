@@ -501,14 +501,15 @@
                                         }
 
                                         if (null !== md.vs.nowv.match(/!?\[.*?\]\[.*?\]/)) {
-                                            var alt = md.vs.nowv.replace(/!?\[(.*?)\]\[.*?\]/, "$1");
-                                            var src = md.vs.nowv.replace(/!?\[.*?\]\[(.*?)\]/, "$1");
+                                            var alt = md.vs.nowv.replace(/^.*?!?\[(.*?)\]\[.*?\].*/, "$1");
+                                            var src = md.vs.nowv.replace(/^.*?!?\[.*?\]\[(.*?)\].*/, "$1");
 
                                             var title_matches = getTitle(src);
                                             src   = title_matches[0];
                                             title = title_matches[1];
 
-                                            md.vs.nowv = createtags(src, alt, title);
+                                            var a = createtags(src, alt, title);
+                                            md.vs.nowv = md.vs.nowv.replace(/^(.*)?(!?\[.*?\]\[.*?\])(.*)?/, "$1" + a + "$3");
                                         }
 
                                         if (null !== md.vs.nowv.match(/!?\[.*?\]/)) {
